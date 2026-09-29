@@ -364,8 +364,8 @@ footer a { font-weight: 600; }
         <span class="p-title">Blind stair climbing with PPO</span>
         <span class="p-meta">2026 &middot; MuJoCo + Gymnasium + Stable-Baselines3</span>
         <div class="stats">
-          <div class="stat"><b>4/5</b><span>episodes climb all 5 steps</span></div>
-          <div class="stat"><b>0.5 &rarr; 1.05</b><span>torso height, verified</span></div>
+          <div class="stat"><b>14/20</b><span>cross the plateau &middot; 70%</span></div>
+          <div class="stat"><b>+0.31 m</b><span>mean torso rise</span></div>
           <div class="stat"><b>0</b><span>terrain sensors</span></div>
           <div class="stat"><b>&gt;1000</b><span>flat-ground eval return</span></div>
         </div>
@@ -373,9 +373,16 @@ footer a { font-weight: 600; }
       <div class="p-body">
         <p class="repo-link"><a href="https://github.com/aviadarn/mujoco-rl-playground">github.com/aviadarn/mujoco-rl-playground</a></p>
 
-        <p>PPO locomotion in MuJoCo: an Ant quadruped trained to walk on flat ground past an eval return of 1000, then warm-started onto <code>AntStairs-v0</code> &mdash; a generated five-step staircase, 10 cm rise and 50 cm run, topped by a five-metre plateau. The policy is <strong>blind</strong>: standard proprioceptive observations only, no terrain sensing of any kind. It climbs all five steps and crosses the plateau in 4 of 5 episodes.</p>
+        <p>PPO locomotion in MuJoCo: an Ant quadruped trained to walk on flat ground past an eval return of 1000, then warm-started onto <code>AntStairs-v0</code> &mdash; a generated five-step staircase, 10 cm rise and 50 cm run, topped by a five-metre plateau. The policy is <strong>blind</strong>: standard proprioceptive observations only, no terrain sensing of any kind. It gets over the steps and across the plateau in <strong>14 of 20 episodes</strong>.</p>
 
-        <p><strong>The success criterion is the interesting part.</strong> Distance travelled is not evidence of climbing, so success is verified against the torso-height profile &mdash; z rising from 0.5 to about 1.05 through the stair region &mdash; rather than x-displacement alone.</p>
+        <figure>
+          <img src="assets/antstairs-progress.png" alt="Torso x position over time: successful episodes rise through the staircase band onto the plateau, failed episodes oscillate inside the staircase band" loading="lazy">
+          <figcaption>Every episode either gets over the steps or stalls on them. There is no middle outcome.</figcaption>
+        </figure>
+
+        <div class="note"><b>The obvious success metric does not work here, which is the interesting part.</b> Torso height sounds like the right way to prove a climb &mdash; and it is not usable frame by frame, because the Ant's gait already bobs between 0.5 and 1.4 m on flat ground, straight through the range a 0.5 m climb would produce. What survives is the <em>mean</em>: averaged over an episode, torso height on the plateau sits <b>0.19&ndash;0.35 m</b> above the same policy's flat-ground average, against a 0.5 m total rise. The per-episode pass/fail call is made on distance instead, <code>x ≥ 5.5 m</code>, which the plot above shows separates cleanly.</div>
+
+        <p>An earlier 5-episode sample read 4/5; re-running it gave 2/5. Both are noise around the same policy &mdash; 20 episodes puts it at 14/20. Five samples was not enough to quote a rate from.</p>
 
         <div class="note"><b>A silent bug that looked exactly like success.</b> MuJoCo's <code>ant.xml</code> sets <code>conaffinity="0"</code> in its geom <em>default</em>, and only the floor overrides it. Custom terrain geoms therefore have no collision unless they set it explicitly &mdash; so the ant walked straight through the staircase while every metric reported a clean climb. Same shape as the decoder bug in the world-model project: the measurement agreed with me before the system did.</div>
 
