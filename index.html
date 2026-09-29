@@ -305,6 +305,10 @@ footer a { font-weight: 600; }
             <img class="pixel" src="assets/so101-expert.gif" alt="Scripted inverse-kinematics expert demonstration" width="320" loading="lazy">
             <figcaption>The scripted IK expert that generated the data.</figcaption>
           </figure>
+          <figure>
+            <img class="pixel" src="assets/so101-fail.gif" alt="A failed rollout: the gripper closes beside the cube instead of on it" width="320" loading="lazy">
+            <figcaption>A failure, for scale. The arm gets there and closes beside the cube &mdash; the 12% is almost all this.</figcaption>
+          </figure>
         </div>
 
         <ul class="bullets">
@@ -335,9 +339,18 @@ footer a { font-weight: 600; }
 
         <p>I added a one-shot triggered jump to the Open Duck Mini v2 walking policy: press a key, the duck crouches, leaves the ground, lands, and resumes walking &mdash; one unified policy for both gaits. Eight-dimensional command with a jump flag, a shared jump state machine, gated reward terms, and a space-bar trigger in the MuJoCo viewer.</p>
 
-        <p><strong>The feasibility analysis came from the model file, not from intuition.</strong> At 2.107 kg the duck weighs 20.7 N, and with a ~0.09 m effective moment arm two legs supply roughly 72 N &mdash; about 3.5&times; body weight. Force was never the constraint. The binding constraint is the <em>slew-rate clamp</em> on motor targets: <code>max_motor_velocity × ctrl_dt</code> = 0.105 rad per control step at 50 Hz. So the highest-leverage knob was raising that clamp during the jump window, not adding torque.</p>
+        <figure>
+          <img src="assets/duck-walk.gif" alt="The shipping Open Duck policy walking forward in MuJoCo, seen from a fixed camera" width="336" loading="lazy">
+          <figcaption>The policy that ships, commanded forward at 0.15 m/s. Zero falls, base height steady to &plusmn;3 mm.</figcaption>
+        </figure>
 
-        <div class="note"><b>Then I tested the torque hypothesis anyway, and it was wrong.</b> A 4&times;-actuator variant produced <b>the highest reward of any run, 227.6</b> &mdash; and the worst robot on the bench. Identical 2500-step rollouts, all three commanded to walk forward at +0.15 m/s:</div>
+        <p><strong>I got the constraint wrong on paper first.</strong> Arithmetic from the MJCF said force was not the limit: at 2.107 kg the duck weighs 20.7 N, and with a ~0.09 m effective moment arm two legs supply roughly 72 N, about 3.5&times; body weight. That pointed at the <em>slew-rate clamp</em> on motor targets &mdash; 0.105 rad per control step at 50 Hz &mdash; as the thing to raise. It was a clean argument and it was wrong.</p>
+
+        <div class="note"><b>The probe said the opposite.</b> Driving the legs open-loop to full extension pins <code>actuator_force</code> at 3.23 / 3.23 N&middot;m &mdash; torque <em>is</em> binding. And the slew clamp I had nominated was worth almost nothing: 5.24 against 30 rad/s moved peak rise by <b>0.6 mm</b>, 32.5 to 33.1. The knob I had already raised had bought essentially zero. A third finding came free: raising <code>forcerange</code> alone plateaus around 37 mm from 2&times; to 16&times; &mdash; force and <code>kp</code> together are what raise takeoff velocity.</div>
+
+        <p>So the 4&times;-actuator variant was built to settle one question the measurement had opened: is the ~8 mm hop an <em>actuator</em> limit or a <em>learning</em> limit? Real STS3215 servos cannot deliver 4&times;, so the task was sim-only and disposable by design.</p>
+
+        <div class="note"><b>It produced the highest reward of any run, 227.6 &mdash; and the worst robot on the bench.</b> Identical 2500-step rollouts, all three commanded to walk forward at +0.15 m/s:</div>
 
         <div class="tbl-scroll">
         <table>
@@ -350,9 +363,11 @@ footer a { font-weight: 600; }
         </table>
         </div>
 
-        <p>With 4&times; actuators the policy stopped walking and started bouncing: airborne 32% of the time, <strong>moving backward when commanded forward</strong>, falling repeatedly. The jump terms contributed roughly 615 of the episode reward, swamping the degraded locomotion, and nothing in the reward function penalises a permanently bouncing gait. Higher reward, worse robot &mdash; and the apex height I had derived from that airtime was measuring continuous bouncing, not flight.</p>
+        <p>With 4&times; actuators the policy stopped walking and started bouncing: airborne 32% of the time, <strong>moving backward when commanded forward</strong>, falling repeatedly. The jump terms contributed roughly 615 of the episode reward, swamping the degraded locomotion, and nothing in the reward function penalises a permanently bouncing gait. So the extra airtime never answered the question it was built to answer &mdash; it was measuring continuous bouncing, not flight, and the apex figure derived from it was meaningless.</p>
 
-        <p>I reverted it and corrected my own earlier "actuator-limited" conclusion in the commit message. The policy that ships is the stock-actuator one at <code>jump_prob = 1/800</code>: no falls, the steadiest base of the three, the best forward tracking, turning at 0.43 rad/s, and an honest ~8 mm hop &mdash; a height the real STS3215 servos can actually deliver. Lowering the jump probability that far was itself a trade: jumping more often measurably degraded turning.</p>
+        <p>Reverted, with the reasoning in the commit message. That is two wrong conclusions in a row on the same knob: the paper argument that torque was fine, then the measurement's implied fix that more torque would buy height. Each was overturned by the next thing I checked &mdash; arithmetic by a probe, the probe's fix by a behavioural rollout.</p>
+
+        <p>The policy that ships is the stock-actuator one at <code>jump_prob = 1/800</code>: no falls, the steadiest base of the three, the best forward tracking, turning at 0.43 rad/s, and an honest ~8 mm hop &mdash; a height the real STS3215 servos can actually deliver. Lowering the jump probability that far was itself a trade: jumping more often measurably degraded turning.</p>
 
         <p><strong>Also built here:</strong> one-command observability for remote training runs. <code>./monitor.sh</code> finds the live vast.ai instance by itself and brings up Prometheus, Grafana and Loki against it &mdash; GPU, CPU and memory graphs, the training log, and the eval-reward curve in one dashboard, served from my own laptop over SSH with nothing exposed publicly. A <code>--lite</code> mode serves a zero-dependency page with no Docker at all. Separately, switching JAX to <code>cuda12-local</code> cut remote setup time by 65%.</p>
       </div>
