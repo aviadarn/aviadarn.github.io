@@ -183,8 +183,47 @@ footer a { font-weight: 600; }
     <h2>Selected work</h2>
     <p class="section-hint">Headline numbers are on every card. Open one for the method, the figures and what went wrong.</p>
 
-    <!-- ============ 1. off-road lidar ============ -->
+    <!-- ============ 0. VLM data strategy ============ -->
     <details class="project" open>
+      <summary>
+        <span class="p-title">Does paying for human-annotated data beat taking it at random?</span>
+        <span class="p-meta">2026 &middot; Qwen2.5-VL-3B + LoRA on ChartQA &middot; total rented-GPU cost $1.81</span>
+        <div class="stats">
+          <div class="stat"><b>+1.7 pts</b><span>human data &middot; p = 0.042</span></div>
+          <div class="stat"><b>+0.4 pts</b><span>quality score &middot; p = 0.685</span></div>
+          <div class="stat"><b>1.51&times;</b><span>human recovered, no benefit</span></div>
+          <div class="stat"><b>2,500</b><span>eval Qs, frozen first</span></div>
+        </div>
+      </summary>
+      <div class="p-body">
+        <p class="repo-link"><a href="https://github.com/aviadarn/vlm-data-strategy">github.com/aviadarn/vlm-data-strategy</a></p>
+
+        <p>ChartQA's training pool is 74% template-generated and 26% human-written &mdash; the shape of a real sourcing decision, where synthetic augmentation is cheap and human annotation is not. If you can afford to train on 4,000 examples, which 4,000 should you buy? Three arms at a fixed budget, identical in everything except <em>which examples they contain</em>: base model, adapter rank, learning rate, schedule, steps, seed, prompt and evaluation all held constant. The 2,500-question test set was frozen before any training run, and decoding is greedy so no arm moves on sampling noise.</p>
+
+        <figure>
+          <img src="assets/vlm-slices.png" alt="Accuracy by arm on human-written versus machine-generated questions, with Wilson confidence intervals" loading="lazy">
+          <figcaption>The overall number understates everything. The baseline already answers 94.2% of machine-generated questions before any fine-tuning, so averaging across both slices dilutes the effect.</figcaption>
+        </figure>
+
+        <p><strong>Human-authored data wins by 1.7 points on the human-written slice (p = 0.042).</strong> The two arms also buy different things: against the baseline, random gains +4.8 on text answers and +0.3 on numeric &mdash; it mostly learned ChartQA's answer <em>format</em>. The human arm adds only +0.5 more on text but <strong>+1.1 on numeric</strong>, which is the part that requires actually reading the chart.</p>
+
+        <p>The third arm is the one worth building. If a cheap score computed from question and answer text alone could pick out the good examples, a vendor pipeline could gate on it without knowing or trusting who produced each item. It ranks by templatedness, near-duplication, answer leakage and degeneracy &mdash; and it never sees the source label.</p>
+
+        <figure>
+          <img src="assets/vlm-paired.png" alt="Paired McNemar test: the human arm gains 59 and loses 38 questions against the control; the scored arm gains 51 and loses 46" loading="lazy">
+          <figcaption>Paired McNemar against the random control on the human-written slice &mdash; both arms see the identical frozen test set.</figcaption>
+        </figure>
+
+        <div class="note"><b>The score works as a detector and fails as a selector.</b> Its top 4,000 is 39.6% human against a 26.1% base rate &mdash; a <b>1.51&times; lift</b>, so surface form genuinely carries provenance signal. But the model trained on that selection scored 0.7392 against the control's 0.7344, <b>p = 0.685</b>. Recovering half again as much human data bought nothing measurable. Whatever makes human annotations better training material is not what this score detects. The practical reading: demand provenance metadata from vendors rather than inferring it &mdash; a heuristic that half-works as a classifier can be worthless as a filter, and the classifier metric would have told you it was working.</div>
+
+        <p><strong>Two bugs, both caught in a probe before the real runs, both of which would have produced confident wrong numbers rather than crashing.</strong> Right-padding silently corrupted batched generation &mdash; decoder-only models need left padding, and with pad tokens between the prompt and the first generated token the baseline scored 0.104 instead of 0.630 on the same 200 questions, with nothing erroring. And an unstable sort made the experiment unreproducible: <code>sort_values</code> defaults to quicksort, the quality score produces many exact ties, and the scored arm came out 24.8% human on one machine and 20.5% on another from identical inputs. Fixed with a stable sort and an explicit tie-break; all three selections now hash identically across machines. The first version of the README reported that the score recovered no human data at all &mdash; that was this bug, not a result.</p>
+
+        <p><em>Stated in the repo, not buried: p = 0.042 is marginal, this is one seed on one model and one task, and the effect is 1.7 points on 1,250 questions. A second seed costs about $0.50 and should come before the claim carries weight.</em></p>
+      </div>
+    </details>
+
+    <!-- ============ 1. off-road lidar ============ -->
+    <details class="project">
       <summary>
         <span class="p-title">Off-road lidar perception under degraded sensing</span>
         <span class="p-meta">2026 &middot; GOOSE-Ex, Liebherr R924 excavator &middot; total rented-GPU cost $1.81</span>
