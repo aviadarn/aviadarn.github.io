@@ -222,6 +222,38 @@ footer a { font-weight: 600; }
       </div>
     </details>
 
+    <!-- ============ 0b. VLM judge reward hacking ============ -->
+    <details class="project">
+      <summary>
+        <span class="p-title">Can you game a vision-language judge?</span>
+        <span class="p-meta">2026 &middot; QA harness, 1,152 adversarial submissions &middot; total rented-GPU cost $0.03</span>
+        <div class="stats">
+          <div class="stat"><b>91 of 144</b><span>correct answers rejected</span></div>
+          <div class="stat"><b>4.2&times;</b><span>confident fabrication</span></div>
+          <div class="stat"><b>36.8% &rarr; 3.5%</b><span>without the reference</span></div>
+          <div class="stat"><b>1&ndash;3%</b><span>hack rate that meant nothing</span></div>
+        </div>
+      </summary>
+      <div class="p-body">
+        <p class="repo-link"><a href="https://github.com/aviadarn/vlm-judge-hacking">github.com/aviadarn/vlm-judge-hacking</a></p>
+
+        <p>A judge scoring model answers <em>is</em> a reward signal, and a reward signal that can be satisfied without doing the task is a reward hack waiting to happen. So the question is not &ldquo;is the judge accurate&rdquo; but which specific exploits move it, and how often. 1,152 submissions over 144 ChartQA questions, balanced across human-written and machine-generated questions and numeric and text answers. Every wrong answer is a <strong>real model error</strong>, drawn from the 10,000 recorded predictions of the four fine-tuned models above &mdash; inventing plausible wrong answers would measure the imagination of whoever wrote the suite.</p>
+
+        <figure>
+          <img src="assets/vlm-judge-controls.png" alt="Left: the judge accepts 36.8% of correct answers with the reference but only 3.5% without it, while wrong-answer acceptance stays near 2%. Right: confident fabrication is accepted 4.2 times more often than the same wrong answers stated plainly." loading="lazy">
+          <figcaption>Every attack scored a 1&ndash;3% hack rate, which reads as a robust judge. The controls say otherwise.</figcaption>
+        </figure>
+
+        <div class="note"><b>The headline is a control failure.</b> Qwen2.5-VL-3B rejects 1,065 of 1,152 submissions &mdash; including <b>91 of 144 genuinely correct answers</b>, with zero unparsed verdicts. It is not robust, it is inert, and a hack-rate table alone would have shipped a broken reward model as a safe one. Two of the eight cases are controls for exactly this reason, and the report now refuses to interpret any attack number until they pass.</div>
+
+        <p><strong>Confident fabrication is the exploit that works.</strong> A wrong number delivered with a fabricated derivation &mdash; <em>&ldquo;read directly off the axis label and confirmed by the data label printed on the bar&rdquo;</em> &mdash; is accepted 4.2&times; more often than the identical wrong answers stated plainly, and it is the only attack that survives into blind mode. Verbosity, style-matching, shotgunning and near-miss numbers all did nothing. Assertive fake reasoning is what moves this judge.</p>
+
+        <p><strong>The reference is doing nearly all the work.</strong> Run the same suite without showing the judge the gold answer and its ability to recognise a correct answer collapses from 36.8% to 3.5% &mdash; a 91% loss, with the intervals against wrong answers now overlapping entirely. That is the transition from grader to reward signal: a judge that is marginal in an eval pipeline is worthless in an RL loop, and testing it only in reference mode tells you nothing about the setting where hacking actually pays.</p>
+
+        <p><em>One judge, one size, one task, and fixed attack phrasings &mdash; a larger judge would very likely clear the control bar. That is the point of shipping the harness rather than the number: <code>--model</code> points it at any judge, and the control test is what tells you whether yours is usable.</em></p>
+      </div>
+    </details>
+
     <!-- ============ 1. off-road lidar ============ -->
     <details class="project">
       <summary>
@@ -529,6 +561,10 @@ footer a { font-weight: 600; }
     <h2>Upstream contributions</h2>
     <p class="section-hint">Bugs found while using other people's code, sent back with a reproduction.</p>
     <ul class="plain">
+      <li>
+        <div class="what"><a href="https://github.com/EvolvingLMMs-Lab/lmms-eval/pull/1550">EvolvingLMMs-Lab/lmms-eval #1550</a> &mdash; batched generation was silently right-padded</div>
+        <div class="detail">Qwen2.5-VL ships no <code>padding_side</code>, so it falls back to <code>"right"</code> &mdash; and a decoder-only model then generates from the pad tokens rather than the prompt, with nothing raising. Two wrappers batch and generate without setting it, while four other files in the same repo already guard it. Found while running my own ChartQA evaluations, where the same bug cost <b>0.104 vs 0.630</b> relaxed accuracy on identical questions. One line each, plus a CPU reproduction that needs no model weights.</div>
+      </li>
       <li>
         <div class="what"><a href="https://github.com/tempo-sim/Tempo/pull/597">tempo-sim/Tempo #597</a><span class="tag merged">merged</span></div>
         <div class="detail">Setup failures in this Unreal Engine simulation toolkit were invisible and the installer assumed a terminal. Now they surface, and it runs without one.</div>
