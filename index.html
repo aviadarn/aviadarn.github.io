@@ -116,6 +116,7 @@ details.project > summary:hover .stat { background: var(--surface-2); }
 figure { margin: 0 0 16px; }
 figure img { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-2); }
 figure img.pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
+figure video { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-2); }
 figcaption { font-size: 13px; color: var(--muted); margin-top: 7px; }
 .media-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
 .media-row figure { flex: 1 1 260px; }
@@ -435,16 +436,49 @@ footer a { font-weight: 600; }
     <details class="project">
       <summary>
         <span class="p-title">A robot policy that fought back</span>
-        <span class="p-meta">2024 &middot; JetBot on a Jetson Nano, built with my kid</span>
+        <span class="p-meta">2024 &middot; JetBot on a Jetson Nano, built with my kid &middot; rebuilt in simulation and on the same Nano</span>
         <div class="stats">
+          <div class="stat"><b>40/40 vs 1/40</b><span>same frames, fixed vs 2024 labels</span></div>
+          <div class="stat"><b>6.7 &rarr; 21 fps</b><span>same Nano, 2024 setting vs tuned</span></div>
+          <div class="stat"><b>14.6 ms</b><span>frame to steering command</span></div>
           <div class="stat"><b>~3,000</b><span>frames, hand-labelled</span></div>
-          <div class="stat"><b>3 rounds</b><span>of rebalancing to work</span></div>
-          <div class="stat"><b>10 W</b><span>whole compute budget</span></div>
         </div>
       </summary>
       <div class="p-body">
-        <p>An autonomous JetBot on a Jetson Nano: ~3,000 hand-labelled frames, a behaviour-cloning ResNet18 driving policy running in series with a YOLOv5 safety-stop detector on every frame, inside a 4 GB / 10-watt envelope.</p>
-        <p>The first model trained on an artificially uniform dataset and failed on the road. Three rounds of rebalancing the training distribution to match deployment conditions is what made it drive. Shortcut features and distribution mismatch stopped being abstractions after that, and it is the reason I now build the evaluation before the model.</p>
+        <p class="repo-link"><a href="https://github.com/aviadarn/jetbot-driving-policy">github.com/aviadarn/jetbot-driving-policy</a></p>
+
+        <p>An autonomous JetBot on a Jetson Nano, wired into a kids' ride-on car: ~3,000 hand-labelled frames, a behaviour-cloning ResNet18 that predicts where to steer, and a YOLOv5 stop-sign detector running in series with it on every frame, inside a 4 GB / 10-watt envelope. Three rounds of re-collecting data (imbalanced, then uniform, then straight-heavy) is what made it drive the hallway course.</p>
+
+        <p>The images and weights didn't survive, so I rebuilt it. A MuJoCo cone corridor matched to the 2024 camera frames, the same network and training recipe, the 2024 controller ported line for line, and the three data rounds re-run as a controlled experiment on corridors the network never trained on, each driven both ways.</p>
+
+        <div class="media-row">
+          <figure>
+            <video src="assets/jetbot-drive-compare.mp4" poster="assets/jetbot-drive-compare-poster.jpg" width="300" autoplay loop muted playsinline></video>
+            <figcaption>The same unseen corridor and the same round-3 frames, trained two ways. Top: centred labels. Bottom: the 2024 label code. 2&times; speed.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/jetbot-sim-vs-2024.jpg" alt="Three frames from the 2024 car's camera above three frames from the simulator: the same cone corridor, fisheye and camera height" loading="lazy">
+            <figcaption>Top: the 2024 car's camera. Bottom: the simulator, matched to it by eye: cone spacing, fisheye, camera height.</figcaption>
+          </figure>
+        </div>
+
+        <p>Reading the old notebook turned up two bugs that interact. The steering labels were normalised as <code>(px &minus; 50)/50</code> on a 224-pixel frame, a leftover from an older NVIDIA example, so the centre of the image read as a hard right. And a flip augmentation that was switched off in the constructor ran on every sample anyway, negating those off-centre labels. In simulation that label code decides everything. The data mix barely matters: every mix completes 40/40 once the labels are centred.</p>
+
+        <table>
+          <thead><tr><th>Round-3 frames, trained with</th><th class="num">nominal</th><th class="num">off-centre start</th><th class="num">150 ms loop</th><th class="num">steering at full lock</th></tr></thead>
+          <tbody>
+            <tr class="win"><td>centred labels</td><td class="num">40/40</td><td class="num">40/40</td><td class="num">40/40</td><td class="num">0.1%</td></tr>
+            <tr><td>the 2024 label code</td><td class="num">1/40</td><td class="num">1/40</td><td class="num">0/40</td><td class="num">96%</td></tr>
+          </tbody>
+        </table>
+
+        <p>Every failure goes off the right. The real round-3 car drove smoothly, so this is a simulator prediction to test on the car, not a verdict on 2024. The gap comes down to a short list of guesses the simulator makes (the steering actuator, the camera geometry, whether the real network could tell mirrored frames apart), and each can be measured on the car.</p>
+
+        <div class="note"><b>The first version of that result was my bug.</b> The network trained the 2024 way learned to tell flipped training frames from real ones. The cue was my renderer: its anti-aliasing used <code>cv2.pyrDown</code>, which centres on even pixels and doesn't commute with a mirror, so every frame had a half-pixel handedness. I fixed it, added a mirror-symmetry test, and re-ran the pair. The result held, but for a different reason: now the one floor tile repeated under every corridor gave the flips away. On a floor it had never seen, the same network completes 18/40.</div>
+
+        <p>The safety stop has its own story. The 2024 stop-sign set is traffic-sign crops, median 49&times;49 px, where every box covers the whole image. Retrained with the 2024 recipe it reproduces the 0.995 mAP50, and it boxes 97% of every frame, including 12 of 12 real frames from the 2024 car with no sign in them. The 2024 car's detector worked, so its weights were different; this data just gives a model no reason to learn what <em>isn't</em> a sign. Stock COCO YOLOv5s finds the sign out to 2.5&ndash;3 m with no false stops.</p>
+
+        <p>On the same Nano, the 2024 setting (detector at 640, FP32, every frame) takes 143 ms per decision even on TensorRT, 6.7 fps. FP16, a 320 input and the detector on every 4th frame bring it to 14.6 ms, and the camera becomes the limit at 21 fps. Unpinned clocks alone cost 37%: the governor parks the GPU at 58% because the loop only keeps it busy about half of each frame.</p>
       </div>
     </details>
 
