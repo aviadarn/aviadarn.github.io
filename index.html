@@ -254,6 +254,40 @@ footer a { font-weight: 600; }
       </div>
     </details>
 
+    <!-- ============ 0c. ChartQA annotation audit ============ -->
+    <details class="project">
+      <summary>
+        <span class="p-title">How much of a benchmark number is the labels?</span>
+        <span class="p-meta">2026 &middot; ChartQA test split, 250-item stratified audit &middot; no GPU used</span>
+        <div class="stats">
+          <div class="stat"><b>9.3%</b><span>of gold labels defective</span></div>
+          <div class="stat"><b>+1.1 to +1.8</b><span>points every model gains</span></div>
+          <div class="stat"><b>0.7&ndash;0.9</b><span>points that are the scorer</span></div>
+          <div class="stat"><b>+1.9 &rarr; +2.2</b><span>prior conclusion survives</span></div>
+        </div>
+      </summary>
+      <div class="p-body">
+        <p class="repo-link"><a href="https://github.com/aviadarn/chartqa-annotation-audit">github.com/aviadarn/chartqa-annotation-audit</a></p>
+
+        <p>Write the task specification a data vendor would work from, audit real annotations against it, and quantify what the errors cost. The spec was drafted, piloted on 30 items, amended once, and <strong>frozen before any test item was touched</strong>. Then 250 test items drawn over four strata with a recorded seed, and two passes: <strong>pass 1 answers the question blind</strong>, never seeing the gold label; pass 2 sees the gold and the blind answer and assigns a verdict, instructed to treat the blind answer as a prompt to look closer rather than as evidence. Answering blind first is the point &mdash; an auditor shown the label anchors to it, and confirms most of what it was asked to check.</p>
+
+        <figure>
+          <img src="assets/chartqa-audit.png" alt="Left: human-written questions carry all the format errors at 3.7% while machine-generated questions are twice as likely to be factually wrong at 4.3%. Right: correcting the labels moves all four models up by 1.1 to 1.8 points." loading="lazy">
+          <figcaption>Weighted to the population from the stratified sample, 10,000-draw bootstrap. Published accuracy is known exactly on all 2,500 questions; only the correction is estimated.</figcaption>
+        </figure>
+
+        <p><strong>9.3% of gold labels are defective</strong> [95% CI 5.9, 13.6] &mdash; 3.2% factually wrong, 3.1% ambiguous, 1.9% format violations, 1.1% unanswerable from the chart. Correcting them moves <em>every</em> model <strong>up</strong>, by 1.1 to 1.8 points: a bad label almost always marks a correct answer wrong, so the published benchmark charges models for the labels' mistakes.</p>
+
+        <div class="note"><b>The two question families fail differently, which is the part a vendor conversation needs.</b> Human-written questions carry <b>all</b> the format errors (3.7% against 0.0%) &mdash; people write <code>45%</code> where the spec wants <code>45</code>. Machine-generated questions are twice as likely to be <b>factually wrong</b> (4.3% against 2.0%): a template that misreads a chart misreads it confidently and at scale. A single headline error rate hides both.</div>
+
+        <p><strong>And 0.7 to 0.9 points of the gap is not the labels at all &mdash; it is the scorer.</strong> Those are items where the gold is right and the model is right and the 5%-tolerance matcher still disagrees with the spec: formatting the grader punishes that a person marking the same answer would accept.</p>
+
+        <p><strong>Does the prior conclusion survive?</strong> That is the question worth asking of any audit. On the human-written slice, the <a href="https://github.com/aviadarn/vlm-data-strategy">companion experiment's</a> human-minus-random gap goes from a published +1.9 to a true <strong>+2.2 [0.8, 3.6]</strong>, and the label-free scored arm stays indistinguishable at +0.5 [&minus;0.7, 1.6]. It survives and strengthens slightly &mdash; neither result was an artifact of bad labels.</p>
+
+        <p><em>Stated first in the repo, not last: both passes were run by a model against the frozen spec, and the human adjudication stage the design allows for was not run. Reliability comes from the two-pass structure &mdash; pass 1 matched the gold on 186 of 250, and of the 64 where it differed pass 2 ruled the gold defective in 54 &mdash; but pass 2 sees pass 1, so that is coherence, not independence.</em></p>
+      </div>
+    </details>
+
     <!-- ============ 1. off-road lidar ============ -->
     <details class="project">
       <summary>
