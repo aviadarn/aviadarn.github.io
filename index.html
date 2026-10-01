@@ -584,6 +584,11 @@ footer a { font-weight: 600; }
         <p>The safety stop has its own story. The 2024 stop-sign set is traffic-sign crops, median 49&times;49 px, where every box covers the whole image. Retrained with the 2024 recipe it reproduces the 0.995 mAP50, and it boxes 97% of every frame, including 12 of 12 real frames from the 2024 car with no sign in them. The 2024 car's detector worked, so its weights were different; this data just gives a model no reason to learn what <em>isn't</em> a sign. Stock COCO YOLOv5s finds the sign out to 2.5&ndash;3 m with no false stops.</p>
 
         <p>On the same Nano, the 2024 setting (detector at 640, FP32, every frame) takes 143 ms per decision even on TensorRT, 6.7 fps. FP16, a 320 input and the detector on every 4th frame bring it to 14.6 ms, and the camera becomes the limit at 21 fps. Unpinned clocks alone cost 37%: the governor parks the GPU at 58% because the loop only keeps it busy about half of each frame.</p>
+
+        <figure>
+          <img src="assets/jetbot-wiring.svg" alt="Wiring: 18650 pack powers the JetBot board's 5 V regulator and TB6612FNG motor driver; the Nano reads the IMX219 over CSI and drives the PCA9685 over I2C; the driver's two channels run the ride-on car's drive and steering motors" loading="lazy">
+          <figcaption>The 2024 wiring. Parts: Jetson Nano 4 GB, IMX219-160 camera, Waveshare JetBot AI Kit board (TB6612FNG, PCA9685, 3&times; 18650), Wireless-AC8265, and a 6 V kids' ride-on car with a drive motor and a steering motor. <a href="https://github.com/aviadarn/jetbot-driving-policy/blob/main/docs/HARDWARE.md">Full parts list, test gear and upgrade path</a>.</figcaption>
+        </figure>
       </div>
     </details>
 
