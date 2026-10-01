@@ -187,12 +187,12 @@ footer a { font-weight: 600; }
     <details class="project" open>
       <summary>
         <span class="p-title">Does paying for human-annotated data beat taking it at random?</span>
-        <span class="p-meta">2026 &middot; Qwen2.5-VL-3B + LoRA on ChartQA &middot; total rented-GPU cost $1.81</span>
+        <span class="p-meta">2026 &middot; Qwen2.5-VL-3B + LoRA on ChartQA, two independent draws &middot; total rented-GPU cost $2.90</span>
         <div class="stats">
-          <div class="stat"><b>+1.7 pts</b><span>human data &middot; p = 0.042</span></div>
-          <div class="stat"><b>+0.4 pts</b><span>quality score &middot; p = 0.685</span></div>
+          <div class="stat"><b>+1.7 / +1.5</b><span>human data, two draws</span></div>
+          <div class="stat"><b>p = .042 / .082</b><span>replicates, marginally</span></div>
           <div class="stat"><b>1.51&times;</b><span>human recovered, no benefit</span></div>
-          <div class="stat"><b>2,500</b><span>eval Qs, frozen first</span></div>
+          <div class="stat"><b>last</b><span>where coverage finished</span></div>
         </div>
       </summary>
       <div class="p-body">
@@ -205,7 +205,9 @@ footer a { font-weight: 600; }
           <figcaption>The overall number understates everything. The baseline already answers 94.2% of machine-generated questions before any fine-tuning, so averaging across both slices dilutes the effect.</figcaption>
         </figure>
 
-        <p><strong>Human-authored data wins by 1.7 points on the human-written slice (p = 0.042).</strong> The two arms also buy different things: against the baseline, random gains +4.8 on text answers and +0.3 on numeric &mdash; it mostly learned ChartQA's answer <em>format</em>. The human arm adds only +0.5 more on text but <strong>+1.1 on numeric</strong>, which is the part that requires actually reading the chart.</p>
+        <p><strong>Human-authored data wins by 1.7 points on the human-written slice (p = 0.042)</strong> &mdash; and then by 1.5 points on a second, independent draw. The two arms also buy different things: against the baseline, random gains +4.8 on text answers and +0.3 on numeric &mdash; it mostly learned ChartQA's answer <em>format</em>. The human arm adds only +0.5 more on text but <strong>+1.1 on numeric</strong>, which is the part that requires actually reading the chart.</p>
+
+        <div class="note"><b>The effect replicates. The significance claim does not.</b> The first version of this write-up called p = 0.042 marginal and said a second seed should come before the claim carried weight. That seed has now been run &mdash; an independent subset draw <em>and</em> a different training seed, overlapping the original by 14% (random) and 54% (human), which is what the pool sizes predict. Human data won again, by <b>+1.55 points</b>, at <b>p = 0.082</b>. So the honest statement is <em>a consistent ~1.6-point advantage across two independent draws, individually marginal at p = 0.042 and 0.082</em> &mdash; a stronger claim about the effect than one seed could support, and a weaker one about the statistics than the original headline made.</div>
 
         <p>The third arm is the one worth building. If a cheap score computed from question and answer text alone could pick out the good examples, a vendor pipeline could gate on it without knowing or trusting who produced each item. It ranks by templatedness, near-duplication, answer leakage and degeneracy &mdash; and it never sees the source label.</p>
 
@@ -218,7 +220,9 @@ footer a { font-weight: 600; }
 
         <p><strong>Two bugs, both caught in a probe before the real runs, both of which would have produced confident wrong numbers rather than crashing.</strong> Right-padding silently corrupted batched generation &mdash; decoder-only models need left padding, and with pad tokens between the prompt and the first generated token the baseline scored 0.104 instead of 0.630 on the same 200 questions, with nothing erroring. And an unstable sort made the experiment unreproducible: <code>sort_values</code> defaults to quicksort, the quality score produces many exact ties, and the scored arm came out 24.8% human on one machine and 20.5% on another from identical inputs. Fixed with a stable sort and an explicit tie-break; all three selections now hash identically across machines. The first version of the README reported that the score recovered no human data at all &mdash; that was this bug, not a result.</p>
 
-        <p><em>Stated in the repo, not buried: p = 0.042 is marginal, this is one seed on one model and one task, and the effect is 1.7 points on 1,250 questions. A second seed costs about $0.50 and should come before the claim carries weight.</em></p>
+        <p><strong>And a prediction this project made and got wrong.</strong> The first write-up said a selection built for <em>diversity</em> rather than quality was the obvious next arm, because in <a href="https://github.com/aviadarn/so101-lerobot">the robot-demonstration experiment</a> curating by quality halved success by collapsing coverage. So a coverage arm was added, maximising breadth of question form &mdash; 4,000 distinct templates against random's 2,859, with a human share of 29% against random's 26% so any gain would be breadth rather than human data sneaking in. It finished <strong>last</strong>, below the random control: 0.7288 against 0.7344, gained 45 and lost 53, p = 0.480. The cross-modality generalisation is not there.</p>
+
+        <p><em>Stated in the repo, not buried: two draws establish the direction, not the magnitude; the effect is ~1.6 points on 1,250 questions; and the scorer's near-duplicate signal turned out to detect duplicate questions rather than per-chart duplication, because ChartQA stores every image under one path. No published number changes, but the docstring oversold it.</em></p>
       </div>
     </details>
 
