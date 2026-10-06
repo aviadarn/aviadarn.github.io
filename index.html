@@ -292,6 +292,57 @@ footer a { font-weight: 600; }
       </div>
     </details>
 
+    <!-- ============ 0e. G1 carries a box ============ -->
+    <details class="project">
+      <summary>
+        <span class="p-title">Teaching a humanoid to carry a box &mdash; and catching it falling on purpose</span>
+        <span class="p-meta">2026 &middot; Unitree G1, MuJoCo Playground + Brax PPO on rented RTX 4090s, tested in plain MuJoCo &middot; total GPU cost $1.27</span>
+        <div class="stats">
+          <div class="stat"><b>0/50 &rarr; 50/50</b><span>walking with 8 kg, stock vs mine</span></div>
+          <div class="stat"><b>0/50 &rarr; 50/50</b><span>standing with 6 kg, after the reward fix</span></div>
+          <div class="stat"><b>0/50</b><span>same training without the payload, from 2 kg</span></div>
+          <div class="stat"><b>8.7 m</b><span>carton carried between two real pallet stacks</span></div>
+        </div>
+      </summary>
+      <div class="p-body">
+        <p class="repo-link"><a href="https://github.com/aviadarn/g1-real-places#part-2-carrying-a-box-127-of-gpu">github.com/aviadarn/g1-real-places</a> &mdash; Part 2</p>
+
+        <p>Unitree's own walking policy for the G1 falls in 50 of 50 trials once 2 kg is held at the palms. It was trained with the upper body rigid and nothing in the hands. I retrained the legs and waist on MuJoCo Playground's G1 task with two changes. The arms track sampled box-carry poses the policy doesn't control. A hidden payload of 0&ndash;10 kg sits at the palms, which the policy never observes. A control run is identical in every way except that the payload is zero.</p>
+
+        <figure>
+          <video src="assets/g1-carry-pick-loop.mp4" poster="assets/g1-carry-pick-poster.jpg" autoplay loop muted playsinline></video>
+          <figcaption>Picking a carton off a real pallet stack in the Linden warehouse scan. 4 kg, the trained policy on the legs.</figcaption>
+        </figure>
+
+        <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>50 trials per weight, arms in a carry pose</th><th class="num">walk 0.5 m/s, 3 shoves</th><th class="num">stand 10 s</th></tr></thead>
+          <tbody>
+            <tr class="bad"><td>Unitree's stock policy</td><td class="num">0 kg only</td><td class="num">0 kg only</td></tr>
+            <tr class="bad"><td>same training, no payload</td><td class="num">0 kg only</td><td class="num">up to 2 kg</td></tr>
+            <tr class="win"><td>trained with 0&ndash;10 kg in the hands</td><td class="num">50/50 up to 8 kg</td><td class="num">50/50 up to 6 kg</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <figure>
+          <img src="assets/g1-carry-success.png" alt="Success rate against payload for walking and standing: the payload-trained policy stays at 100% to 8 kg walking and 6 kg standing; Unitree's stock policy and the no-payload control drop to 0% at 2 to 4 kg" loading="lazy">
+          <figcaption>Each point is 50 trials in plain MuJoCo; the policies trained in MJX, and my observation code matches the training environment's to 3&times;10<sup>&minus;8</sup>.</figcaption>
+        </figure>
+
+        <div class="note"><b>My first policy fell over whenever it was told to stand still, 0 of 50, even empty-handed, and that was my reward bug.</b> Playground's stand-still penalty sums every joint's distance from its default pose. I had taken the arms away from the policy and parked them in carry poses, so that penalty became about 2.4 rad of arm offset the policy could never remove. Rewards are scaled by the timestep: standing cost about &minus;24 per stand segment and falling cost &minus;2. It learned to fall. Counting only the legs and waist, plus a short fine-tune with more stand commands, gave 50/50 up to 6 kg. It cost something: walking with 10 kg went from 41/50 to 0/50.</div>
+
+        <p>Two more things I had to catch. Unitree's 29-joint G1 file leaves joint armature, damping and friction at zero, and their own policy falls in under a second on it until those match the 12-joint file it trained on. And my first speed metric, distance along the starting heading, mostly measured heading drift: 0.23 m/s for a policy actually walking at 0.54. Every policy drifts 2&ndash;8&deg;/s with no heading feedback.</p>
+
+        <figure>
+          <video src="assets/g1-carry-place-loop.mp4" poster="assets/g1-carry-place-poster.jpg" autoplay loop muted playsinline></video>
+          <figcaption>Setting it down 8.7 m away on a second stack. Third person, head camera RGB, head camera depth.</figcaption>
+        </figure>
+
+        <p><em>What the demo does not show: it is one scripted run, not a success rate. The grip is a weld once both palms touch the carton. A friction grip with Playground's hand colliders hinged or slipped, so the weld replaces only the friction; the 4 kg still hangs from the arms. At 5 kg it fell while turning during the carry, which the benchmark, straight walking and standing only, doesn't cover.</em></p>
+      </div>
+    </details>
+
     <!-- ============ 0d. G1 in real places ============ -->
     <details class="project">
       <summary>
