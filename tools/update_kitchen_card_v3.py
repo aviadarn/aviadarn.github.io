@@ -58,14 +58,14 @@ def render(entry) -> str:
     return json.dumps(entry, ensure_ascii=False)
 
 
-def main() -> None:
+def main(card: str = CARD, prose: list = PROSE, version: str = "v3") -> None:
     path = ROOT / "index.html"
     lines = path.read_text().split("\n")
 
     page = next(i for i, line in enumerate(lines) if line.startswith('"<!DOCTYPE html>'))
     html = json.loads(lines[page])
     old_card = html[html.index("{ id:'kitchen'"):html.index("{ id:'lidar'")]
-    new_card = CARD + " "  # the card list puts "\n " between cards
+    new_card = card + " "  # the card list puts "\n " between cards
     before, after = escaped(old_card), escaped(new_card)
     if lines[page].count(before) != 1:
         raise SystemExit("kitchen card block not found exactly once")
@@ -80,13 +80,13 @@ def main() -> None:
     source = gzip.decompress(base64.b64decode(data)).decode()
     start = source.index("kitchen: [\n")
     end = source.index("\n],\n", start) + len("\n],\n")
-    source = source[:start] + "kitchen: [\n" + ",\n".join(render(e) for e in PROSE) + "\n],\n" + source[end:]
+    source = source[:start] + "kitchen: [\n" + ",\n".join(render(e) for e in prose) + "\n],\n" + source[end:]
     new_data = base64.b64encode(gzip.compress(source.encode(), mtime=0)).decode()
     assert data in lines[blob_index]
     lines[blob_index] = lines[blob_index].replace(data, new_data, 1)
 
     path.write_text("\n".join(lines))
-    print("kitchen card and write-up at v3")
+    print(f"kitchen card and write-up at {version}")
 
 
 if __name__ == "__main__":
